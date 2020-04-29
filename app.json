@@ -1,0 +1,26 @@
+{
+  "id": "dbb80c18-ee0e-45fa-b6e5-c8f15026189b",
+  "name": "Create Manuf Items",
+  "publisher": "Default publisher",
+  "version": "1.0.0.0",
+  "brief": "",
+  "description": "",
+  "privacyStatement": "",
+  "EULA": "",
+  "help": "",
+  "url": "",
+  "logo": "",
+  "dependencies": [],
+  "screenshots": [],
+  "platform": "15.0.0.0",
+  "application": "15.0.0.0",
+  "idRanges": [
+    {
+      "from": 77000,
+      "to": 77000
+    }
+  ],
+  "contextSensitiveHelpUrl": "https://CreateManufItems.com/help/",
+  "showMyCode": true,
+  "runtime": "3.2"
+}
