@@ -6,7 +6,7 @@
             "request": "launch",
             "name": "Your own server",
             "server": "http://localhost",
-            "serverInstance": "BC150",
+            "serverInstance": "BC180",
             "authentication": "Windows",
             "breakOnError": true,
             "launchBrowser": true
