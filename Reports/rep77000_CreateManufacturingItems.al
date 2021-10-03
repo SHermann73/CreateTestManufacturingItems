@@ -42,7 +42,12 @@ report 77000 "BAC Create Manuf Item"
     trigger OnPreReport()
     var
         item: Record Item;
+        CompanyInfo: Record "Company Information";
+        WarningTxt: Label 'User Experience in %1 must be set to premium\Show Capacities in must be set to minutes in Manufacturing Setup\WIP Account must be set in Inventory Posting Setup';
     begin
+        CompanyInfo.get();
+        if not confirm(WarningTxt, false, CompanyInfo.TableCaption) then
+            Exit;
         if Item.Get(Format(OffSetItemNo)) then
             if Confirm(ItemsExist) then
                 DeleteItems;
@@ -50,6 +55,10 @@ report 77000 "BAC Create Manuf Item"
         if not Confirm(AreYouSureTxt) then
             exit;
 
+        CreateWorkCenter('100', 'Assembly', 1.2, '');
+        CreateWorkCenter('300', 'Painting', 1.5, '');
+        CreateWorkCenter('200', 'Machine', 1.3, '');
+        CreateWorkCenter('400', 'Packing', 1.1, '');
         CreateItems;
         Message(DoneTxt);
     end;
@@ -73,7 +82,8 @@ report 77000 "BAC Create Manuf Item"
         Item."No." := Format(OffSetItemNo);
         Item.Insert;
         Item.Validate(Description, StrSubstNo(FinishedTxt, Item.TableCaption));
-        Item2.Get('1000');
+        Item2.SetRange("Costing Method", item2."Costing Method"::FIFO);
+        Item2.FindFirst();
         Item.Validate("Base Unit of Measure", Item2."Base Unit of Measure");
         Item.Validate("Gen. Prod. Posting Group", Item2."Gen. Prod. Posting Group");
         Item.Validate("Inventory Posting Group", Item2."Inventory Posting Group");
@@ -114,7 +124,6 @@ report 77000 "BAC Create Manuf Item"
         Item."No." := Format(OffSetItemNo);
         Item.Insert;
         Item.Validate(Description, StrSubstNo(RawTxt, RawMatNo));
-        Item2.Get('1120');
         Item.Validate("Base Unit of Measure", Item2."Base Unit of Measure");
         Item.Validate("Gen. Prod. Posting Group", Item2."Gen. Prod. Posting Group");
         Item.Validate("Inventory Posting Group", Item2."Inventory Posting Group");
@@ -310,5 +319,75 @@ report 77000 "BAC Create Manuf Item"
 
         if Item.Get(Format(OffSetItemNo + 2003)) then
             Item.Delete(true);
+    end;
+
+    local procedure CreateWorkCenter(inWorkCenterNo: Code[10]; inWorkCenterName: Text[100]; inCostPrice: Decimal; inSubcontractor: code[20])
+    var
+        WorkCenter: Record "Work Center";
+        WorkCenterGroup: Record "Work Center Group";
+        ShopCalendar: Record "Shop Calendar";
+        ShopCalLine: Record "Shop Calendar Working Days";
+        CalcWorkCenterCalendar: Report "Calculate Work Center Calendar";
+        WorkCenterUoM: Record "Capacity Unit of Measure";
+        WorkShift: Record "Work Shift";
+        GenProdPostGroup: Record "Gen. Product Posting Group";
+    begin
+        if not WorkCenterGroup.Get('Test') then begin
+            WorkCenterGroup.Init();
+            WorkCenterGroup.Code := 'TEST';
+            WorkCenterGroup.Name := 'Test';
+        end;
+        if not WorkCenter.Get(inWorkCenterNo) then begin
+            GenProdPostGroup.FindFirst();
+            WorkCenter.Init();
+            WorkCenter."No." := inWorkCenterNo;
+            WorkCenter.Validate(Name, inWorkCenterName);
+            WorkCenter."Work Center Group Code" := WorkCenterGroup.Code;
+            WorkCenter.Validate("Direct Unit Cost", inCostPrice);
+            WorkCenter."Subcontractor No." := inSubcontractor;
+            if inSubcontractor <> '' then
+                WorkCenter."Unit Cost Calculation" := WorkCenter."Unit Cost Calculation"::Units;
+            WorkCenter."Shop Calendar Code" := 'Standard';
+            WorkCenter.Capacity := 1;
+            WorkCenter.Efficiency := 100;
+            WorkCenter."Unit of Measure Code" := 'MINUTES';
+            WorkCenter."Gen. Prod. Posting Group" := GenProdPostGroup.Code;
+            WorkCenter.insert;
+
+            if not WorkCenterUoM.Get(WorkCenter."Unit of Measure Code") then begin
+                WorkCenterUoM.Init();
+                WorkCenterUoM.Code := WorkCenter."Unit of Measure Code";
+                WorkCenterUoM.Type := WorkCenterUoM.Type::Minutes;
+                WorkCenterUoM.Insert();
+            end;
+
+            if not ShopCalendar.Get(WorkCenter."Shop Calendar Code") then begin
+                ShopCalendar.Init();
+                ShopCalendar.Code := WorkCenter."Shop Calendar Code";
+                ShopCalendar.Description := '1 Shift';
+                ShopCalendar.Insert();
+                if not WorkShift.Get('1') then begin
+                    WorkShift.Init();
+                    WorkShift.Code := '1';
+                    WorkShift.Insert();
+                end;
+                ShopCalLine.Init();
+                ShopCalLine."Shop Calendar Code" := ShopCalendar.Code;
+                ShopCalLine."Starting Time" := 070000T;
+                ShopCalLine."Ending Time" := 160000T;
+                ShopCalLine.Day := ShopCalLine.Day::Monday;
+                ShopCalLine.Insert();
+                ShopCalLine.Day := ShopCalLine.Day::Tuesday;
+                ShopCalLine.Insert();
+                ShopCalLine.Day := ShopCalLine.Day::Wednesday;
+                ShopCalLine.Insert();
+                ShopCalLine.Day := ShopCalLine.Day::Thursday;
+                ShopCalLine.Insert();
+                ShopCalLine.Day := ShopCalLine.Day::Friday;
+                ShopCalLine.Insert();
+            end;
+        end;
+        WorkCenter.SetRecFilter();
+        CalcWorkCenterCalendar.SetTableView(WorkCenter);
     end;
 }
