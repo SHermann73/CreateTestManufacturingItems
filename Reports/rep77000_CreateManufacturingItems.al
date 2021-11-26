@@ -1,5 +1,6 @@
-report 77000 "BAC Create Manuf Item"
+report 77000 "BAC Create Manufacturing Item"
 {
+    Caption = 'Create Manufacturing Item';
     UsageCategory = Administration;
     ApplicationArea = All;
     ProcessingOnly = true;
@@ -10,25 +11,19 @@ report 77000 "BAC Create Manuf Item"
         {
             area(Content)
             {
-                group(GroupName)
+                group(Options)
                 {
+                    Caption = 'Options';
                     field(OffSetItemNo; OffSetItemNo)
                     {
+                        Caption = 'OffSet Item No';
                         ApplicationArea = All;
-
                     }
-                }
-            }
-        }
-
-        actions
-        {
-            area(processing)
-            {
-                action(ActionName)
-                {
-                    ApplicationArea = All;
-
+                    field(AddExtraItems; AddExtraItems)
+                    {
+                        Caption = 'Add Extra Items';
+                        ApplicationArea = All;
+                    }
                 }
             }
         }
@@ -60,17 +55,20 @@ report 77000 "BAC Create Manuf Item"
         CreateWorkCenter('200', 'Machine', 1.3, '');
         CreateWorkCenter('400', 'Packing', 1.1, '');
         CreateItems;
-        Message(DoneTxt);
+        Message(DoneTxt,CreatedItems);
     end;
 
     var
         OffSetItemNo: Integer;
+        AddExtraItems: Boolean;
         RawMatNo: Integer;
         FinishedTxt: Label 'Finished %1';
         SemiTxt: Label 'Subassembly %1';
         RawTxt: Label 'Raw Material %1';
         AreYouSureTxt: Label 'Create Test Items - Are you sure?';
-        DoneTxt: Label 'Done';
+        DoneTxt: Label 'The following items were created:\%1';
+        CreatedItems: Text;
+        lf: Char;
         ItemsExist: Label 'Items Exist already - delete test items?';
 
     local procedure CreateItems()
@@ -78,6 +76,7 @@ report 77000 "BAC Create Manuf Item"
         Item: Record Item;
         Item2: Record Item;
     begin
+        lf := 10;
         Item.Init;
         Item."No." := Format(OffSetItemNo);
         Item.Insert;
@@ -94,6 +93,7 @@ report 77000 "BAC Create Manuf Item"
         Item."Production BOM No." := Item."No.";
         Item."Routing No." := Item."No.";
         Item.Modify;
+        CreatedItems := Item."No." + format(lf);
 
         CreateFinishedBom(Item);
         CreateRoutingHeaders(Item);
@@ -114,6 +114,7 @@ report 77000 "BAC Create Manuf Item"
         Item."Production BOM No." := Item."No.";
         Item."Routing No." := Item."No.";
         Item.Modify;
+        CreatedItems += Item."No." + format(lf);
 
         CreateSemiBom(Item);
         CreateRoutingHeaders(Item);
@@ -133,6 +134,7 @@ report 77000 "BAC Create Manuf Item"
         Item.Validate("Unit Cost", 10);
         Item.Validate("Standard Cost", 10);
         Item.Modify;
+        CreatedItems += Item."No." + format(lf);
 
         RawMatNo += 1;
         OffSetItemNo += 1;
@@ -150,6 +152,7 @@ report 77000 "BAC Create Manuf Item"
         Item.Validate("Unit Cost", 11);
         Item.Validate("Standard Cost", 11);
         Item.Modify;
+        CreatedItems += Item."No." + format(lf);
 
         RawMatNo += 1;
         OffSetItemNo += 1;
@@ -167,6 +170,45 @@ report 77000 "BAC Create Manuf Item"
         Item.Validate("Unit Cost", 12);
         Item.Validate("Standard Cost", 12);
         Item.Modify;
+        CreatedItems += Item."No." + format(lf);
+
+        if not AddExtraItems then
+            exit;
+        RawMatNo += 1;
+        OffSetItemNo += 1;
+        Item.Init;
+        Item."No." := Format(OffSetItemNo);
+        Item.Insert;
+        Item.Validate(Description, StrSubstNo(RawTxt, RawMatNo));
+        Item.Validate("Base Unit of Measure", Item2."Base Unit of Measure");
+        Item.Validate("Gen. Prod. Posting Group", Item2."Gen. Prod. Posting Group");
+        Item.Validate("Inventory Posting Group", Item2."Inventory Posting Group");
+        Item.Validate("Costing Method", Item."Costing Method"::FIFO);
+        Item.Validate("Replenishment System", Item."Replenishment System"::Purchase);
+        Item.Validate("Reordering Policy", Item."Reordering Policy"::"Lot-for-Lot");
+        Item.Validate("Manufacturing Policy", Item."Manufacturing Policy"::"Make-to-Order");
+        Item.Validate("Unit Cost", 16);
+        Item.Validate("Standard Cost", 16);
+        Item.Modify;
+        CreatedItems += Item."No." + format(lf);
+
+        RawMatNo += 1;
+        OffSetItemNo += 1;
+        Item.Init;
+        Item."No." := Format(OffSetItemNo);
+        Item.Insert;
+        Item.Validate(Description, StrSubstNo(RawTxt, RawMatNo));
+        Item.Validate("Base Unit of Measure", Item2."Base Unit of Measure");
+        Item.Validate("Gen. Prod. Posting Group", Item2."Gen. Prod. Posting Group");
+        Item.Validate("Inventory Posting Group", Item2."Inventory Posting Group");
+        Item.Validate("Costing Method", Item."Costing Method"::FIFO);
+        Item.Validate("Replenishment System", Item."Replenishment System"::Purchase);
+        Item.Validate("Reordering Policy", Item."Reordering Policy"::"Lot-for-Lot");
+        Item.Validate("Manufacturing Policy", Item."Manufacturing Policy"::"Make-to-Order");
+        Item.Validate("Unit Cost", 24);
+        Item.Validate("Standard Cost", 24);
+        Item.Modify;
+        CreatedItems += Item."No." + format(lf);
     end;
 
     local procedure CreateFinishedBom(inItem: Record Item)
@@ -376,6 +418,7 @@ report 77000 "BAC Create Manuf Item"
                 ShopCalLine."Starting Time" := 070000T;
                 ShopCalLine."Ending Time" := 160000T;
                 ShopCalLine.Day := ShopCalLine.Day::Monday;
+                ShopCalLine."Work Shift Code" := WorkShift.Code;
                 ShopCalLine.Insert();
                 ShopCalLine.Day := ShopCalLine.Day::Tuesday;
                 ShopCalLine.Insert();
